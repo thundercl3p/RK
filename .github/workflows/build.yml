@@ -10,12 +10,16 @@ env:
   PACKAGE_NAME: visitor-pattern
   VERSION: 1.0.0
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Install dependencies
       run: |
@@ -63,7 +67,7 @@ jobs:
         dpkg-deb --build package ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
         
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
         path: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
@@ -74,15 +78,15 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       
     - name: Download artifact
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
         
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
         tag_name: v${{ env.VERSION }}
