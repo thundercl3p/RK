@@ -1,0 +1,63 @@
+name: Build, Test and Package
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libgtest-dev
+        sudo apt-get install -y doxygen graphviz
+        
+    - name: Configure and build
+      run: |
+        mkdir -p build
+        cd build
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+        make -j4
+        ctest --output-on-failure
+        
+    - name: Generate documentation
+      run: |
+        cd build
+        cmake --build . --target docs
+        ls -la docs
+        
+    - name: Create DEB package
+      run: |
+        mkdir -p package/usr/local/bin
+        mkdir -p package/usr/local/lib
+        mkdir -p package/usr/local/include/VisitorPattern
+        cp build/ConceptualExample build/BookstoreExample build/OnlineShopExample build/Program package/usr/local/bin/
+        cp build/libvisitor_static.a package/usr/local/lib/
+        cp -r ../include/* package/usr/local/include/VisitorPattern/
+        
+        mkdir -p package/DEBIAN
+        echo "Package: visitor-pattern" > package/DEBIAN/control
+        echo "Version: 1.0" >> package/DEBIAN/control
+        echo "Section: base" >> package/DEBIAN/control
+        echo "Priority: optional" >> package/DEBIAN/control
+        echo "Architecture: amd64" >> package/DEBIAN/control
+        echo "Maintainer: Student <student@university.edu>" >> package/DEBIAN/control
+        echo "Description: Implementation of Visitor Design Pattern" >> package/DEBIAN/control
+        
+        dpkg-deb --build package visitor-pattern.deb
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: visitor-pattern-package
+        path: build/visitor-pattern.deb
+        
+    - name: Create release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: build/visitor-pattern.deb
+        body: "DEB package containing Visitor Pattern implementation"
