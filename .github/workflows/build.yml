@@ -59,7 +59,7 @@ jobs:
         echo "Section: devel" >> package/DEBIAN/control
         echo "Priority: optional" >> package/DEBIAN/control
         echo "Architecture: amd64" >> package/DEBIAN/control
-        echo "Maintainer: Your Name <your.email@example.com>" >> package/DEBIAN/control
+        echo "Maintainer: Kiselyov Artyom <student.email@example.com>" >> package/DEBIAN/control
         echo "Description: Visitor Pattern Implementation" >> package/DEBIAN/control
         
     - name: Build DEB package
