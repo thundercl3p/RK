@@ -2,37 +2,36 @@ cmake_minimum_required(VERSION 3.10)
 project(VisitorPattern)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_library(visitor_static STATIC
+    include/Document.h
+    include/DocumentVisitor.h
+    src/Document.cpp
+    src/DocumentVisitor.cpp
+    # Добавьте другие файлы по необходимости
+)
+
+add_executable(ConceptualExample ConceptualExample.cpp)
+target_link_libraries(ConceptualExample visitor_static)
+
+add_executable(BookstoreExample Bookstore.cpp)
+target_link_libraries(BookstoreExample visitor_static)
+
+add_executable(OnlineShopExample OnlineShop.cpp)
+target_link_libraries(OnlineShopExample visitor_static)
 
 enable_testing()
 
-add_library(VisitorStatic STATIC
-    include/Bookstore/Book.hpp
-    include/Bookstore/Movie.hpp
-    include/Bookstore/Bookstore.hpp
-    include/OnlineShop/Element.hpp
-    include/OnlineShop/Visitor.hpp
-    include/OnlineShop/ShoppingBasket.hpp
-    include/ConceptualExample/VisitorBase.hpp
-    include/ConceptualExample/ElementBase.hpp
-)
+add_executable(DocumentTest tests/DocumentTest.cpp)
+target_link_libraries(DocumentTest visitor_static)
+add_test(NAME DocumentTest COMMAND DocumentTest)
 
-add_executable(VisitorApp app/main.cpp)
-target_link_libraries(VisitorApp PRIVATE VisitorStatic)
+add_executable(DocumentVisitorTest tests/DocumentVisitorTest.cpp)
+target_link_libraries(DocumentVisitorTest visitor_static)
+add_test(NAME DocumentVisitorTest COMMAND DocumentVisitorTest)
 
-find_package(GTest REQUIRED)
-include(GoogleTest)
-
-add_executable(BookstoreTests tests/BookstoreTests.cpp)
-target_link_libraries(BookstoreTests PRIVATE VisitorStatic GTest::GTest GTest::Main)
-gtest_discover_tests(BookstoreTests)
-
-add_executable(OnlineShopTests tests/OnlineShopTests.cpp)
-target_link_libraries(OnlineShopTests PRIVATE VisitorStatic GTest::GTest GTest::Main)
-gtest_discover_tests(OnlineShopTests)
-
-add_executable(ConceptualTests tests/ConceptualExampleTests.cpp)
-target_link_libraries(ConceptualTests PRIVATE VisitorStatic GTest::GTest GTest::Main)
-gtest_discover_tests(ConceptualTests)
-
-set(CPACK_GENERATOR "DEB")
-include(CPack)
+install(TARGETS visitor_static ARCHIVE DESTINATION lib)
+install(TARGETS ConceptualExample BookstoreExample OnlineShopExample 
+        RUNTIME DESTINATION bin)
+install(DIRECTORY include/ DESTINATION include)
