@@ -1,9 +1,17 @@
-name: Build, Test and Package
+name: C++ CI with Packaging
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PACKAGE_NAME: visitor-pattern
+  VERSION: 1.0.0
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     
     steps:
@@ -12,52 +20,75 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake libgtest-dev
-        sudo apt-get install -y doxygen graphviz
+        sudo apt-get install -y build-essential cmake libgtest-dev libgmock-dev debhelper dh-make
         
-    - name: Configure and build
+    - name: Configure and Build
       run: |
-        mkdir -p build
+        mkdir build
         cd build
         cmake -DCMAKE_BUILD_TYPE=Release ..
-        make -j4
-        ctest --output-on-failure
+        cmake --build . --config Release
         
-    - name: Generate documentation
+    - name: Run tests
       run: |
         cd build
-        cmake --build . --target docs
-        ls -la docs
+        ctest --output-on-failure
         
-    - name: Create DEB package
+    - name: Create DEB package directory structure
       run: |
+        mkdir -p package/DEBIAN
         mkdir -p package/usr/local/bin
         mkdir -p package/usr/local/lib
-        mkdir -p package/usr/local/include/VisitorPattern
-        cp build/ConceptualExample build/BookstoreExample build/OnlineShopExample build/Program package/usr/local/bin/
-        cp build/libvisitor_static.a package/usr/local/lib/
-        cp -r ../include/* package/usr/local/include/VisitorPattern/
+        mkdir -p package/usr/local/include
         
-        mkdir -p package/DEBIAN
-        echo "Package: visitor-pattern" > package/DEBIAN/control
-        echo "Version: 1.0" >> package/DEBIAN/control
-        echo "Section: base" >> package/DEBIAN/control
+    - name: Copy files to package directory
+      run: |
+        cd build
+        cp ConceptualExample BookstoreExample OnlineShopExample Program ../package/usr/local/bin/
+        cp libvisitor_static.a ../package/usr/local/lib/
+        cp -r ../include/* ../package/usr/local/include/
+        
+    - name: Create control file
+      run: |
+        echo "Package: ${{ env.PACKAGE_NAME }}" > package/DEBIAN/control
+        echo "Version: ${{ env.VERSION }}" >> package/DEBIAN/control
+        echo "Section: devel" >> package/DEBIAN/control
         echo "Priority: optional" >> package/DEBIAN/control
         echo "Architecture: amd64" >> package/DEBIAN/control
-        echo "Maintainer: Student <student@university.edu>" >> package/DEBIAN/control
-        echo "Description: Implementation of Visitor Design Pattern" >> package/DEBIAN/control
+        echo "Maintainer: Your Name <your.email@example.com>" >> package/DEBIAN/control
+        echo "Description: Visitor Pattern Implementation" >> package/DEBIAN/control
         
-        dpkg-deb --build package visitor-pattern.deb
+    - name: Build DEB package
+      run: |
+        dpkg-deb --build package ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
         
     - name: Upload artifact
       uses: actions/upload-artifact@v3
       with:
-        name: visitor-pattern-package
-        path: build/visitor-pattern.deb
+        name: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
+        path: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
         
-    - name: Create release
-      if: github.ref == 'refs/heads/main'
+  create-release:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
+        
+    - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: build/visitor-pattern.deb
-        body: "DEB package containing Visitor Pattern implementation"
+        files: ${{ env.PACKAGE_NAME }}-${{ env.VERSION }}.deb
+        tag_name: v${{ env.VERSION }}
+        name: Release v${{ env.VERSION }}
+        body: |
+          Visitor Pattern Implementation
+          - Includes static library
+          - Example executables
+          - Unit tests
